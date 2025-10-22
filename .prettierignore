@@ -1,0 +1,39 @@
+# .prettierignore
+
+# Dependencies
+/node_modules
+
+# Build artifacts
+/build
+/dist
+/out
+/public
+
+# Framework-specific cache
+/.next/
+/.nuxt/
+/.svelte-kit/
+/.cache/
+
+# Package manager lock files (optional, but good practice)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local configuration
+.vscode
+.idea
+
+# Test coverage reports
+/coverage
