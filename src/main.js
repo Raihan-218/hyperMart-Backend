@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import cors from 'cors';
 import { connectDB } from "./db/index.js";
 import { app } from './app.js'; // <-- 1. IMPORT your real app from app.js
 
