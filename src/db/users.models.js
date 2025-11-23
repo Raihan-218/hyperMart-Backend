@@ -2,8 +2,7 @@ import mongoose from 'mongoose';
 import jwt from "jsonwebtoken"
 import bcrypt from 'bcrypt';
 const Schema = mongoose.Schema;
-
-// 1. Define addressSchema FIRST
+// address schema
 const addressSchema = new Schema({
   street: {
     type: String,
@@ -36,7 +35,7 @@ const addressSchema = new Schema({
   }
 });
 
-// 2. Define userSchema SECOND
+// user schema
 const userSchema = new Schema({
   fullName: {
     type: String,
@@ -68,7 +67,7 @@ const userSchema = new Schema({
   refreshToken: {
     type: String
   },
-  addresses: [addressSchema],
+  address: {addressSchema},
 
   wishlist: [{
     type: Schema.Types.ObjectId,
@@ -81,7 +80,7 @@ const userSchema = new Schema({
 userSchema.pre("save", async function (next) {
   if (!this.isModified('password')) return next()
   try {
-    this.password = await bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)  
     next();
 
   } catch (error) {

@@ -21,11 +21,10 @@ export const getAllOrders = async( req , res ) => {
     }
 }
 
-// Example: Update any order's status
 export const updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { status, deliveryPerson } = req.body; // e.g., status: "Shipped"
+        const { status, deliveryPerson } = req.body; 
 
         const order = await Order.findById(orderId);
         if (!order) {
