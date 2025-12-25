@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { addressSchema } from "./users.models.js";
 const Schema = mongoose.Schema;
 
 // This defines a single item within an order
@@ -28,11 +29,7 @@ const orderSchema = new Schema({
     min: 0
   },
   shippingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String
+    addressSchema
   },
   paymentId: {
     type: String, // From Razorpay/Stripe
@@ -45,7 +42,7 @@ const orderSchema = new Schema({
   },
   deliveryPerson: { // Your 'employee' role
     type: Schema.Types.ObjectId,
-    ref: 'User' 
+    ref: 'User'
   },
   trackingHistory: [{
     status: String,

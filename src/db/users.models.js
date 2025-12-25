@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import bcrypt from 'bcrypt';
 const Schema = mongoose.Schema;
 // address schema
-const addressSchema = new Schema({
+export const addressSchema = new Schema({
   street: {
     type: String,
     required: true,
