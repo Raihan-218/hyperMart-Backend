@@ -32,12 +32,16 @@ const productSchema = new Schema({
     type: String, // e.g., 'Jacket', 'T-Shirt', 'Pants'
     required: true
   },
-  images: [{
-    type: String, // URLs for the images
-    required: true
-  }],
+  images: [
+  {
+    url: { type: String, required: true },
+    public_id: { type: String }
+  }
+],
   // Use the inventory sub-schema
   inventory: [inventorySchema]
 }, { timestamps: true });
+
+
 
 export const Product = mongoose.model('Product', productSchema);

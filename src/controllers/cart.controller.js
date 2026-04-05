@@ -2,29 +2,31 @@
 import { Cart } from '../db/carts.model.js';
 import { Product } from '../db/products.model.js';
 import { Order } from '../db/orders.model.js';
-
+import { User } from '../db/users.models.js';
 
 export const addCart = async (req, res) => {
     try {
-        const { user_id, product_id, qty } = req.body;
+        const { product_id, qty } = req.body;
+        const user_id = req.user._id;
 
-        if (!user_id || !product_id || qty == null || price == null)
+        if (!product_id || qty == null)
             return res.status(400).json({ message: "Cart Error : missing field" })
 
+        // Check if product exists and get price
+        const product = await Product.findById(product_id);
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        const price = product.price;
 
-        const productExistInCart = await Cart.findOneAndUpdate({ product: product_id, user: user_id },
-            {
-                $set: {
-                    qty: qty,
-                    price: price
-                }
-            }, {
-            new: true,
-            runValidators: true,
-            upsert: false
-        })
+        const productExistInCart = await Cart.findOne({ product: product_id, user: user_id });
 
-        if (!productExistInCart) {
+        if (productExistInCart) {
+            productExistInCart.qty += qty;
+            productExistInCart.price = price; // Update price in case it changed
+            await productExistInCart.save();
+            return res.status(200).json({ message: "Cart updated", productExistInCart })
+        } else {
             const newCartItem = await Cart.create({
                 user: user_id,
                 product: product_id,
@@ -33,8 +35,6 @@ export const addCart = async (req, res) => {
             })
             return res.status(201).json({ message: "Product added to cart", newCartItem })
         }
-
-        return res.status(200).json({ message: "Product updated to cart", productExistInCart })
 
     } catch (error) {
         console.log("ERROR :", error);
@@ -53,7 +53,7 @@ export const getCart = async (req, res) => {
         const cartItems = await Cart.find({ user: user_id }).populate("product").lean();
 
         if (cartItems.length === 0)
-            return res.status(200).json({ message: "cart is empty" }, cartItems)
+            return res.status(200).json({ message: "cart is empty", cartItems})
 
         return res.status(200).json({ message: "cart Fetched successfully", cartItems })
 
@@ -83,53 +83,57 @@ export const deleteCartItem = async (req, res) => {
     }
 }
 
-
 export const cartCheckout = async (req, res) => {
-
     try {
-        const user = req.user._id;
+        const userId = req.user._id;
 
-        if (!user)
-            return res.status(401).json({ message: "User login Required" })
+        if (!userId)
+            return res.status(401).json({ message: "User login required" });
 
-        const cartItems = await Cart.find({ user: user }).populate("product").lean();
+        const cartItems = await Cart.find({ user: userId })
+            .populate("product")
+            .lean();
 
         if (cartItems.length === 0)
-            return res.status(200).json({ message: "cart is empty" }, cartItems)
+            return res.status(200).json({ message: "Cart is empty", cartItems });
 
         let checkoutAmount = 0;
 
-        for (let product of cartItems) {
-            const productExists = await Product.findById(product.product)
-            if (!productExists)
-                return res.status(404).json({ message: "Product not found" })
+        for (let item of cartItems) {
+            if (!item.product)
+                return res.status(404).json({ message: "Product not found" });
 
-            checkoutAmount += productExists.price * qty;
+            checkoutAmount += item.product.price * item.quantity;
         }
-        const tax = checkoutAmount * 0.18
-        const finalAmt = tax + checkoutAmount
 
-        //RazorPay gateway     
+        const tax = checkoutAmount * 0.18;
+        const finalAmt = checkoutAmount + tax;
 
+        const userData = await User.findById(userId);
 
+        // Razorpay integration here
 
-        const deleteCart = await Cart.findByIdAndDelete(user)
-        if (!deleteCart)
-            return res.status(400).json({ message: "the cart items not found" })
+        await Cart.deleteMany({ user: userId });
 
         const orderDetails = await Order.create({
-            user: user,
+            user: userId,
             items: cartItems,
             totalAmount: finalAmt,
-            shippingAddress: user.address,
-            paymentId: "", // payment id from the razor pay gateway
-            deliveryPerson: "name",
-            trackingHistory: Date.now()
-        })
-        return res.status(200).json({message:"Order created"} , orderDetails)
+            shippingAddress: userData.address,
+            paymentId: "",
+            deliveryPerson: "Not Assigned",
+            trackingHistory: [
+                { status: "Order Placed", date: new Date() }
+            ]
+        });
+
+        return res.status(200).json({
+            message: "Order created successfully",
+            orderDetails
+        });
 
     } catch (error) {
-        console.log("ERROR :", error)
-        return res.status(500).json({ message: "Internal Server Error" })
+        console.log("ERROR:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
     }
-}
+};

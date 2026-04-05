@@ -67,8 +67,8 @@ export const userLogin = async (req, res) => {
       return res.status(400).json({ message: "all fields are required" })
     }
 
-    const user = await User.findOne({ email });
-
+    const user = await User.findOne( { email } );
+    
     if (!user) {
       return res.status(404).json({ message: "user not found" })
     }
@@ -106,7 +106,7 @@ export const userLogin = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" })
   }
 }
-
+    
 
 export const userLogOut = async (req, res) => {
   await User.findByIdAndUpdate(req.user._id, {

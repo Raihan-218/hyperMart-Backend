@@ -3,16 +3,21 @@ import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.util
 
 export const getProducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        const { category, type } = req.query;
+        let query = {};
+        if (category) query.category = category;
+        if (type) query.type = type;
 
-        if (!products)
-            return res.status(201).json({ message: "no products found in the inventory" })
+        const products = await Product.find(query);
+
+        if (!products || products.length === 0)
+            return res.status(200).json({ products: [] })
 
 
         return res.status(200).json({ products })
     } catch (error) {
         console.log('ERROR :', error);
-        return res.status(500).json({ message: "Internal Server Error" })
+        return res.status(500).json({ message: "Internal Server Error", error: error.message, stack: error.stack })
     }
 }
 
@@ -44,18 +49,18 @@ export const addproducts = async (req, res) => {
         if (uploadedImages.length === 0)
             return res.status(500).json({ message: "images upload failed" })
 
-        for (let file of uploadedImages) {
-            console.log(file);
-        }
-
-        // what to do for the existing product ??
+        // Fix: Extract URLs only, as schema expects [String]
+        const imageUrls = uploadedImages.map(img => ({
+            url: img.url,
+            public_id: img.public_id
+        }));
         const newProduct = await Product.create({
             name,
             description,
             price: Number(price),
             category,
             type,
-            images: uploadedImages
+            images: imageUrls
         });
 
         if (!newProduct)
@@ -72,7 +77,12 @@ export const getSingleProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const product = await Product.findByIdAndUpdate(id);
+        // Check for undefined or invalid ID format (simple check)
+        if (!id || id === 'undefined') {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        const product = await Product.findById(id);
 
         if (!product)
             return res.status(404).json({ message: "Product not found" })
@@ -81,6 +91,10 @@ export const getSingleProduct = async (req, res) => {
 
     } catch (error) {
         console.log("ERROR :", error);
+        // Handle CastError specifically
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "Invalid product ID format" });
+        }
         return res.status(500).json({ message: "Internal Server Error" })
     }
 }
@@ -117,25 +131,25 @@ export const updateProduct = async (req, res) => {
 }
 
 
-export const deleteProduct = async(req, res) => {
+export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
         const product = await Product.findById(id);
-        
-        if(!product)
-            return res.status(404).json({message:"product not found"})
-        
-        for(let file of product.images){
+
+        if (!product)
+            return res.status(404).json({ message: "product not found" })
+
+        for (let file of product.images) {
             await deleteOnCloudinary(file.public_id);
         }
-        
+
         await Product.findByIdAndDelete(id);
 
-        return res.status(200).json({message:"product deleted successfully"})
+        return res.status(200).json({ message: "product deleted successfully" })
 
     } catch (error) {
         console.log("ERROR :", error);
-        return res.status(500).json({message:"Internal Server Error"})
+        return res.status(500).json({ message: "Internal Server Error" })
     }
 }
