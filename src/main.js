@@ -1,29 +1,24 @@
-import express from 'express'
-import dotenv from 'dotenv'
-import { connectDB } from "./db/index.js"
-const app = express();
-const port = process.env.PORT || 3000
-dotenv.config();
-app.use(express.json());
+import dotenv from 'dotenv';
+import { connectDB } from "./db/index.js";
+import { app } from './app.js'; // <-- 1. IMPORT your real app from app.js
 
+// 2. Configure dotenv *FIRST*
+// This ensures process.env.PORT is loaded
+dotenv.config({
+    path: './.env' 
+});
 
-app.get('/',(req , res )=>{
-    res.status(200).json({
-        message:"hello, this is hypermart"
-    })
-})
-
+const port = process.env.PORT || 3000;
 
 const startSever = async () => {
     try {
         await connectDB();
-        app.listen( port , ()=>{
-            console.log(`server is running on PORT : http://localhost:${port}`);
-            
-        })
-    } catch (error) {
-        console.log("ERROR :",error);
         
+        app.listen(port, () => {
+            console.log(`Server is running on PORT : http://localhost:${port}`);
+        });
+    } catch (error) {
+        console.log("ERROR connecting to DB or starting server:", error);
     }
 }
 
