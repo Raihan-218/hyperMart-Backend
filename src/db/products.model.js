@@ -33,14 +33,26 @@ const productSchema = new Schema({
     required: true
   },
   images: [
-  {
-    url: { type: String, required: true },
-    public_id: { type: String }
-  }
-],
+    {
+      url: { type: String, required: true },
+      public_id: { type: String }
+    }
+  ],
+  averageRating: {
+    type: Number,
+    default: 0
+  },
+  numReviews: {
+    type: Number,
+    default: 0
+  },
   // Use the inventory sub-schema
   inventory: [inventorySchema]
-}, { timestamps: true });
+}, { timestamps: true },
+
+
+
+);
 
 
 
