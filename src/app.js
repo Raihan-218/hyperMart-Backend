@@ -18,11 +18,15 @@ import userRouter from './routes/user.routes.js';
 import adminRouter from './routes/admin.routes.js';
 import productRouter from './routes/products.route.js'
 import cartRouter from './routes/carts.routes.js';
-
+import reviewRouter from './routes/review.routes.js'
+app.get("/", (req, res) => {
+  res.send("Backend is live 🚀");
+});
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products",productRouter);
 app.use("/api/v1/carts" , cartRouter)
+app.use("/api/v1/reviews" , reviewRouter)
 
 
 export { app };
