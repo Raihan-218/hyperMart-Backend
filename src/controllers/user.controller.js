@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import { User } from '../db/users.models.js';
 import { Product } from '../db/products.model.js';
@@ -266,6 +267,115 @@ export const getMyOrders = async (req, res) => {
   } catch (error) {
     console.error('Fetching customer orders failed:', error);
     return res.status(500).json({ message: 'Unable to fetch order history.' });
+  }
+};
+
+export const cancelMyOrder = async (req, res) => {
+  let session;
+  try {
+    const { orderId } = req.params;
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    const cancellableStatuses = ['Pending', 'Confirmed', 'Processing'];
+    const fulfillmentStatuses = ['Shipped', 'Out for Delivery', 'Delivered'];
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: 'Invalid order ID.' });
+    }
+    if (req.body?.reason !== undefined && typeof req.body.reason !== 'string') {
+      return res.status(400).json({ message: 'Cancellation reason must be text.' });
+    }
+    if (reason.length > 500) {
+      return res.status(400).json({ message: 'Cancellation reason must be 500 characters or fewer.' });
+    }
+
+    session = await mongoose.startSession();
+    let result;
+    await session.withTransaction(async () => {
+      const order = await Order.findOne({ _id: orderId, user: req.user._id }).session(session);
+      if (!order) {
+        result = { status: 404, message: 'Order not found.' };
+        return;
+      }
+      const hasEnteredFulfillment = order.trackingHistory.some((entry) => fulfillmentStatuses.includes(entry.status));
+      if (!cancellableStatuses.includes(order.status) || hasEnteredFulfillment) {
+        result = {
+          status: 409,
+          message: hasEnteredFulfillment
+            ? 'Orders that have entered shipping cannot be cancelled.'
+            : `Orders with status "${order.status}" cannot be cancelled.`
+        };
+        return;
+      }
+
+      const cancelledAt = new Date();
+      const refundStatus = order.paymentId && order.paymentId !== 'pending' ? 'pending' : 'not_required';
+      const cancelledOrder = await Order.findOneAndUpdate(
+        { _id: orderId, user: req.user._id, status: { $in: cancellableStatuses } },
+        {
+          $set: {
+            status: 'Cancelled',
+            cancelledAt,
+            ...(reason ? { cancellationReason: reason } : {}),
+            refundStatus
+          },
+          $push: { trackingHistory: { status: 'Cancelled', timestamp: cancelledAt } }
+        },
+        { new: true, session, runValidators: true }
+      );
+
+      if (!cancelledOrder) {
+        result = { status: 409, message: 'This order can no longer be cancelled.' };
+        return;
+      }
+
+      for (const item of order.items) {
+        const product = await Product.findById(item.product).select('inventory').session(session).lean();
+        if (!product) {
+          console.warn(`Skipping inventory restoration for deleted product ${item.product} on order ${orderId}.`);
+          continue;
+        }
+
+        const inventory = Array.isArray(product.inventory) ? product.inventory : [];
+        if (inventory.length === 0) continue;
+
+        if (!item.color || !item.size) {
+          throw Object.assign(new Error(`The purchased variant for ${item.name} cannot be identified.`), { status: 409 });
+        }
+        const hasVariant = inventory.some((variant) => variant.color === item.color && variant.size === item.size);
+        if (!hasVariant) {
+          throw Object.assign(new Error(`The purchased ${item.color} / ${item.size} variant for ${item.name} no longer exists.`), { status: 409 });
+        }
+
+        const stockUpdate = await Product.updateOne(
+          {
+            _id: item.product,
+            inventory: { $elemMatch: { color: item.color, size: item.size } }
+          },
+          { $inc: { 'inventory.$.stock': item.quantity } },
+          { session }
+        );
+        if (stockUpdate.modifiedCount !== 1) {
+          throw Object.assign(new Error(`Could not restore inventory for ${item.name}. Please contact support.`), { status: 409 });
+        }
+      }
+
+      result = { order: cancelledOrder };
+    });
+
+    if (result?.status) {
+      return res.status(result.status).json({ message: result.message });
+    }
+    return res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      order: result.order
+    });
+  } catch (error) {
+    console.error('Customer order cancellation failed:', error);
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    return res.status(500).json({ message: 'Unable to cancel this order right now.' });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 

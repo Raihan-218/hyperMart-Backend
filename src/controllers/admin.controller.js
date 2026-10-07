@@ -26,9 +26,16 @@ export const updateOrderStatus = async (req, res) => {
         const { orderId } = req.params;
         const { status, deliveryPerson } = req.body;
 
+        if (status === 'Cancelled') {
+            return res.status(400).json({ message: "Use the customer cancellation flow to cancel an order." });
+        }
+
         const order = await Order.findById(orderId);
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
+        }
+        if (order.status === 'Cancelled') {
+            return res.status(409).json({ message: "Cancelled orders cannot be reopened or changed." });
         }
 
         order.status = status || order.status;

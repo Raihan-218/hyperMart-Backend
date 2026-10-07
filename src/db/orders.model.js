@@ -28,6 +28,10 @@ const orderSchema = new Schema({
     required: true,
     min: 0
   },
+  subtotal: { type: Number, min: 0, default: 0 },
+  taxAmount: { type: Number, min: 0, default: 0 },
+  shippingAmount: { type: Number, min: 0, default: 0 },
+  discountAmount: { type: Number, min: 0, default: 0 },
   shippingAddress: {
     type: addressSchema,
     default: {}
@@ -37,11 +41,18 @@ const orderSchema = new Schema({
     required: true,
     default: 'pending'
   },
+  refundStatus: {
+    type: String,
+    enum: ['not_required', 'pending', 'processed'],
+    default: 'not_required'
+  },
   status: {
     type: String,
-    enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
+    enum: ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
     default: 'Pending'
   },
+  cancelledAt: { type: Date },
+  cancellationReason: { type: String, trim: true },
   deliveryPerson: {
     type: Schema.Types.ObjectId,
     ref: 'User',

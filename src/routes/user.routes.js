@@ -5,6 +5,7 @@ import {
   userLogOut,
   userProfile,
   getMyOrders,
+  cancelMyOrder,
   updateProfile,
   deleteUser,
   userAddress,
@@ -29,6 +30,7 @@ router.post('/logout', verifyJWT, userLogOut);
 router.get('/profile', verifyJWT, userProfile);
 router.get('/me', verifyJWT, userProfile);
 router.get('/orders', verifyJWT, getMyOrders);
+router.post('/orders/:orderId/cancel', verifyJWT, cancelMyOrder);
 router.put('/profile', verifyJWT, updateProfile);
 router.delete('/account', verifyJWT, deleteUser);
 router.get('/wishlist', verifyJWT, getWishlist);

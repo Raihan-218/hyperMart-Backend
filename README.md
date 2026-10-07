@@ -173,7 +173,7 @@ PORT=5000
 
 DB_URI=your_mongodb_connection_string
 
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 
 AccessTokenSecret=your_access_token_secret
 AccessTokenExpiry=1d
