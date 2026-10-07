@@ -22,6 +22,8 @@ import reviewRouter from './routes/review.routes.js'
 app.get("/", (req, res) => {
   res.send("Backend is live 🚀");
 });
+
+
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products",productRouter);

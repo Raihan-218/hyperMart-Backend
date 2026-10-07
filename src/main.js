@@ -10,4 +10,11 @@ dotenv.config({
 
 await connectDB();
 
+if (!process.env.VERCEL) {
+    const port = process.env.PORT || 5643;
+    app.listen(port, () => {
+        console.log(`Server listening on  http://localhost:${port}`);
+    });
+}
+
 export default app;

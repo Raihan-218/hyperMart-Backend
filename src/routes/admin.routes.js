@@ -7,7 +7,7 @@ const router = Router();
 
 router.get('/users', verifyJWT , isAdmin , getAllUsers )
 router.get('/orders', verifyJWT , isAdmin , getAllOrders )
-router.put('/orderstatus', verifyJWT , isAdmin , updateOrderStatus )
+router.put('/orders/:orderId/status', verifyJWT , isAdmin , updateOrderStatus )
 
 
 export default router;

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Review } from "../db/reviews.model.js";
 import { Product } from "../db/products.model.js";
 
@@ -38,15 +39,26 @@ export const deleteReview = async (req, res) => {
 export const addReviews = async (req, res) => {
     try {
         const { id } = req.params;
-        const { rating, text } = req.body;
+        const { rating, text, comment } = req.body;
         const userId = req.user?._id;
+        const reviewText = typeof text === "string" ? text : typeof comment === "string" ? comment : "";
 
         if (!id) {
             return res.status(400).json({ message: "Product Id is required" });
         }
 
-        if (!rating) {
-            return res.status(400).json({ message: "Rating required" });
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        const numericRating = Number(rating);
+        if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+            return res.status(400).json({ message: "Rating must be an integer from 1 to 5" });
+        }
+
+        const product = await Product.findById(id).select("_id");
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
         }
 
         const existing = await Review.findOne({
@@ -55,24 +67,28 @@ export const addReviews = async (req, res) => {
         });
 
         let newReview;
+        const payload = reviewText.trim() ? { text: reviewText.trim() } : null;
+
         if (!existing) {
             newReview = await Review.create({
                 product: id,
                 user: userId,
-                rating,
-                comments: [{ text }]
+                rating: numericRating,
+                comments: payload ? [payload] : []
             });
         } else {
-            existing.rating = rating
-            existing.comments.push({ text })
-            newReview = await existing.save()
+            existing.rating = numericRating;
+            if (payload) {
+                existing.comments.push(payload);
+            }
+            newReview = await existing.save();
         }
 
         const reviews = await Review.find({ product: id });
 
-        const avg =
-            reviews.reduce((acc, r) => acc + r.rating, 0) /
-            reviews.length;
+        const avg = reviews.length
+            ? reviews.reduce((acc, r) => acc + Number(r.rating || 0), 0) / reviews.length
+            : 0;
 
         await Product.findByIdAndUpdate(id, {
             averageRating: avg,
@@ -100,7 +116,10 @@ export const getReviews = async (req, res) => {
         if (!id)
             return res.status(400).json({ message: "Product Id is required" })
 
-        const reviews = (await Review.find({ product: id }).populate("user", "name").sort({ createdAt: -1 }));
+        if (!mongoose.isValidObjectId(id))
+            return res.status(400).json({ message: "Invalid product ID" })
+
+        const reviews = (await Review.find({ product: id }).populate("user", "fullName").sort({ createdAt: -1 }));
 
         return res.status(200).json({ reviews })
 

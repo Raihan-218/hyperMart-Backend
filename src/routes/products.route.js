@@ -13,6 +13,7 @@ router.get('/:id', getSingleProduct);
 // Protected Admin Routes
 router.post('/addproducts', verifyJWT, isAdmin, upload.array('images', 5), addproducts);
 router.put('/updateProduct/:id', verifyJWT, isAdmin, updateProduct);
+router.put('/inventory/:id', verifyJWT, isAdmin, updateProduct);
 router.delete('/delete/:id', verifyJWT, isAdmin, deleteProduct);
 
 export default router;

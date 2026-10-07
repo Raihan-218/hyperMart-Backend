@@ -1,41 +1,38 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
-import jwt from "jsonwebtoken"
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+
 const Schema = mongoose.Schema;
-// address schema
+
 export const addressSchema = new Schema({
   street: {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: ''
   },
   city: {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: ''
   },
   state: {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: ''
   },
   postalCode: {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: ''
   },
   country: {
     type: String,
-    required: true,
+    trim: true,
     default: 'India'
-  },
-  isDefault: {
-    type: Boolean,
-    default: false
   }
-});
+}, { _id: false });
 
-// user schema
 const userSchema = new Schema({
   fullName: {
     type: String,
@@ -48,16 +45,16 @@ const userSchema = new Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/.+\@.+\..+/, 'Please enter a valid email address']
+    match: [/^.+@.+\..+$/, 'Please enter a valid email address']
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: [true, 'Password is required']
   },
   phoneNumber: {
     type: String,
-    // required: true,
-    match: [/^\+?[1-9]\d{1,14}$/, "please enter a valid phone number"]
+    default: '',
+    match: [/^(?:\+?[1-9]\d{1,14})?$/, 'Please enter a valid phone number']
   },
   role: {
     type: String,
@@ -67,62 +64,85 @@ const userSchema = new Schema({
   refreshToken: {
     type: String
   },
-  address: {addressSchema},
-
+  address: {
+    type: addressSchema,
+    default: {}
+  },
   wishlist: [{
     type: Schema.Types.ObjectId,
     ref: 'Product'
-  }]
+  }],
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    default: ''
+  },
+  emailVerificationExpires: {
+    type: Date,
+    default: null
+  },
+  emailVerifiedAt: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true
 });
-// password hashing before saving in the DB (pre hook executes before saving the data in the DB)
-userSchema.pre("save", async function (next) {
-  if (!this.isModified('password')) return next()
-  try {
-    this.password = await bcrypt.hash(this.password, 10)  
-    next();
 
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
   } catch (error) {
     next(error);
   }
-})
-// password checking method
+});
+
 userSchema.methods.isPasswordCorrect = async function (password) {
   try {
-    const result = await bcrypt.compare(password, this.password)
-    return result;
-
+    return await bcrypt.compare(password, this.password);
   } catch (error) {
-    console.log("Error comparing the password :", error);
+    console.log('Error comparing the password:', error);
     return false;
   }
-}
-// method to generate the accessToken 
-userSchema.methods.generateAccessToken = function() {
+};
+
+userSchema.methods.generateAccessToken = function () {
   return jwt.sign({
     _id: this._id,
     fullName: this.fullName,
     email: this.email,
     phoneNumber: this.phoneNumber
-  },
-    process.env.AccessTokenSecret,
-    {
-      expiresIn: process.env.AccessTokenExpiry
-    }
-  )
-}
-// method to generate the refreshToken 
-userSchema.methods.generateRefreshToken = function() {
+  }, process.env.AccessTokenSecret, {
+    expiresIn: process.env.AccessTokenExpiry
+  });
+};
+
+userSchema.methods.generateRefreshToken = function () {
   return jwt.sign({
     _id: this._id
-  },
-    process.env.RefreshTokenSecret,
-    {
-      expiresIn: process.env.RefreshTokenExpiry
-    }
-  )
-}
+  }, process.env.RefreshTokenSecret, {
+    expiresIn: process.env.RefreshTokenExpiry
+  });
+};
 
-// 4. Use 'export' instead of 'module.exports'
+userSchema.methods.setEmailVerificationToken = function () {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return token;
+};
+
+userSchema.methods.clearEmailVerificationToken = function () {
+  this.isEmailVerified = true;
+  this.emailVerificationToken = '';
+  this.emailVerificationExpires = null;
+  this.emailVerifiedAt = new Date();
+};
+
 export const User = mongoose.model('User', userSchema);

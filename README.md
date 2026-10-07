@@ -225,7 +225,11 @@ http://localhost:5000
 | POST   | `/users/register` | Register user        |
 | POST   | `/users/login`    | Login user           |
 | POST   | `/users/logout`   | Logout user          |
+| GET    | `/users/wishlist` | Get authenticated user's wishlist |
+| POST   | `/users/wishlist/:productId` | Toggle a product in the wishlist |
+| DELETE | `/users/wishlist/:productId` | Remove a product from the wishlist |
 | GET    | `/users/me`       | Current user profile |
+| GET    | `/users/orders`   | Authenticated user's order history |
 | PUT    | `/users/profile`  | Update profile       |
 | DELETE | `/users/account`  | Delete account       |
 
@@ -240,6 +244,8 @@ http://localhost:5000
 | POST   | `/products/addproducts`       | Add product (Admin) |
 | PUT    | `/products/updateProduct/:id` | Update product      |
 | DELETE | `/products/delete/:id`        | Delete product      |
+
+Product records provide `colors` (`[{ name, hex? }]`), `sizes` (string array), and `inventory` (`[{ color, size, stock }]`). Inventory is the source of stock availability for each color-size variant. Product detail clients should use `GET /products/:id` for these options and submit the selected `color` and `size` with cart additions.
 
 ---
 
@@ -261,6 +267,8 @@ http://localhost:5000
 | GET    | `/reviews/:id`                | Get product reviews |
 | POST   | `/reviews/:id`                | Add review          |
 | DELETE | `/reviews/comment/:commentId` | Delete review       |
+
+`POST /reviews/:id` accepts `{ "rating": 1, "comment": "..." }` through `{ "rating": 5, "comment": "..." }`. `GET /reviews/:id` returns review ratings and their associated comments.
 
 ---
 

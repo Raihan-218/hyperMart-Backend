@@ -12,8 +12,8 @@ const orderItemSchema = new Schema({
   name: { type: String, required: true }, // Denormalized for easy access
   price: { type: Number, required: true }, // Price at time of purchase
   quantity: { type: Number, required: true, min: 1 },
-  color: { type: String, required: true },
-  size: { type: String, required: true }
+  color: { type: String },
+  size: { type: String }
 }, { _id: false });
 
 const orderSchema = new Schema({
@@ -29,20 +29,23 @@ const orderSchema = new Schema({
     min: 0
   },
   shippingAddress: {
-    addressSchema
+    type: addressSchema,
+    default: {}
   },
   paymentId: {
-    type: String, // From Razorpay/Stripe
-    required: true
+    type: String,
+    required: true,
+    default: 'pending'
   },
   status: {
     type: String,
     enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
     default: 'Pending'
   },
-  deliveryPerson: { // Your 'employee' role
+  deliveryPerson: {
     type: Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    default: null
   },
   trackingHistory: [{
     status: String,

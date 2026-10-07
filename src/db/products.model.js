@@ -8,6 +8,11 @@ const inventorySchema = new Schema({
   stock: { type: Number, required: true, min: 0, default: 0 }
 }, { _id: false });
 
+const colorSchema = new Schema({
+  name: { type: String, required: true, trim: true },
+  hex: { type: String, trim: true, match: /^#(?:[0-9a-fA-F]{3}){1,2}$/ }
+}, { _id: false });
+
 const productSchema = new Schema({
   name: {
     type: String,
@@ -38,6 +43,14 @@ const productSchema = new Schema({
       public_id: { type: String }
     }
   ],
+  colors: {
+    type: [colorSchema],
+    default: []
+  },
+  sizes: {
+    type: [{ type: String, trim: true }],
+    default: []
+  },
   averageRating: {
     type: Number,
     default: 0
